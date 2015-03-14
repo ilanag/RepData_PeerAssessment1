@@ -1,25 +1,96 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
+author: "Ilana Golbin"
 output: 
   html_document:
     keep_md: true
 ---
-
+#Activity Monitoring Data
+Ilana Golbin
 
 ## Loading and preprocessing the data
-
-
+```{r loadData, echo=TRUE}
+data<- read.csv("activity.csv")
+```
 
 ## What is mean total number of steps taken per day?
+```{r histogram, echo=FALSE}
+tapply_data <- tapply(data$steps, data$date, sum)
+barplot(tapply_data)
+title("Total Steps per Day")
+# calculate mean and median
+mean <- mean(tapply_data, na.rm=TRUE)
+median <- median(tapply_data, na.rm=TRUE)
+```
 
-
+The median steps is `r median` and mean steps is `r mean`. 
 
 ## What is the average daily activity pattern?
 
+```{r timeseries, echo=FALSE}
+meanInterval_data <- tapply(data$steps, data$interval, mean, na.rm=TRUE)
+plot(y=meanInterval_data, x=names(meanInterval_data), ylab="Steps", xlab="Interval")
+title("Steps per Interval")
+# calculate maximum
+result <- which.max(meanInterval_data)
+interval <- names(result)
+```
+
+The maximum steps occur in interval `r interval`.
 
 
 ## Imputing missing values
+```{r naCount, echo=FALSE}
+countNA <- sum(is.na(data))
+# fill in missing data with mean for the interval
 
+newData <- data
 
+for (i in 1:length(newData$steps)) {
+  
+  if (is.na(newData$steps[i])) {
+    missingInterval <- toString(newData$interval[i])
+    meanValue <- as.numeric(getElement(meanInterval_data, missingInterval))
+    newData$steps[i] <- meanValue
+  }
+  
+}
+
+# histogram of new dataframe
+tapply_dataNew <- tapply(newData$steps, newData$date, sum)
+barplot(tapply_dataNew)
+title("Total Steps per Day, Adjusted")
+# updated mean and median calculations
+meanUpdated <- mean(tapply_dataNew)
+medianUpdated <- median(tapply_dataNew)
+```
+
+The total number of missing values is: `r countNA`. The updated mean is `r meanUpdated` and updated median is `r medianUpdated`.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+
+```{r patterns, echo=FALSE}
+#dayOfWeek <- factor("weekday", "weekend")
+date <- data$date
+date <- as.Date(date)
+weekVec <- vector()
+dayOfWeek <- vector()
+
+for (d in 1:length(date)) {
+  day <- weekdays(date[d])
+  weekVec <- c(weekVec, day)
+  if (day == "Saturday" | day == "Sunday") {
+    dayOfWeek <- c(dayOfWeek, "weekend")
+  } else {
+    dayOfWeek <- c(dayOfWeek, "weekday")
+  }
+}
+fact <- factor(dayOfWeek, labels=c("weekend", "weekday"))
+factDATA <- cbind(data, fact) 
+
+library(lattice)
+attach(factDATA)
+xyplot(steps~interval|fact)
+
+```
